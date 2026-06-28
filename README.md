@@ -122,13 +122,14 @@ What it can do:
 - Resolve a Chrome profile display name, defaulting to `Work`, for local profile-file reads.
 - Read recent downloads from a copied Chrome History database.
 - Read available reading-list entries from Chrome bookmarks data.
-- Mark pinned tabs and tab groups as unavailable until a deterministic source is added.
+- Read pinned-tab and tab-group metadata from Chrome session files when available.
 
 Permission model:
 
 - Uses Chrome AppleScript and read-only copies of local Chrome profile files.
 - Read-only; it must not close tabs, open URLs, download files, or modify browser state.
-- Chrome AppleScript does not expose profile ownership per open tab, pinned state, or tab groups.
+- Chrome AppleScript does not expose profile ownership per open tab.
+- Session-derived pinned/tab-group output may expose tab IDs/group IDs before full title or URL mapping.
 - Treats URLs, titles, downloads, and reading-list entries as private context.
 
 ### `terminal-context`
@@ -138,16 +139,17 @@ Purpose: answer "what am I coding?" from shell, git, process, and tmux state.
 What it can do:
 
 - Report the script current directory and an optional target project path.
+- Report Terminal and iTerm windows/tabs with TTYs when AppleScript can read them.
 - Show git root, branch, HEAD, and short working-tree status.
 - Show recent shell history from the readable local history file.
-- List likely running developer processes.
+- List likely running developer jobs with PID, PPID, PGID, TTY, state, elapsed time, and command.
 - Show active `VIRTUAL_ENV`, active conda environment, and tmux sessions.
 
 Permission model:
 
 - Uses local shell, git, `ps`, shell history, and optional tmux commands.
 - Read-only; it must not kill processes, attach sessions, run package scripts, or mutate git state.
-- A non-interactive script cannot see live shell built-in `jobs` from another Terminal tab.
+- A non-interactive script cannot see live shell built-in `jobs` from another Terminal tab, so it reports TTY/process-group candidates instead.
 - Treats command history and process arguments as private context.
 
 ### `editor-context`
@@ -158,14 +160,17 @@ What it can do:
 
 - Report running Cursor and VS Code windows.
 - Use window titles to infer active file and project names when the editor exposes them.
-- Show git diff stats and status for a supplied project path.
-- Mark cursor position, diagnostics, and precise selection as unavailable until an editor extension or explicit source exists.
+- Inspect Cursor/VS Code persisted workspace state when available.
+- Report Accessibility cursor/range metadata when the focused editor exposes it.
+- Optionally print selected text with `--include-selection`.
+- Show git diff stats, git status, and `git diff --check` diagnostics for a supplied project path.
 
 Permission model:
 
-- Uses System Events AppleScript and git.
+- Uses System Events AppleScript, local Cursor/VS Code state files, Python 3, and git.
 - Read-only; it must not edit files, save buffers, run formatters, or apply code actions.
-- For selected editor text, compose with `mac-context` selection capture when explicitly requested.
+- Selection capture uses Accessibility only and does not mutate the clipboard.
+- Full language-server diagnostics still require an editor extension or project-specific diagnostic command.
 
 ### `daily-calendar-view`
 
@@ -202,9 +207,9 @@ These skills assume an agent/runtime with:
 - Optional `cua-driver` access for launching apps and verifying windows; message and event selection should still be done with deterministic scripts/connectors.
 - Optional Google Calendar and Outlook Calendar connector access for calendar workflows.
 - On macOS, Finder automation plus Spotlight metadata commands for `finder-context`.
-- On macOS, Chrome automation and readable Chrome profile files for `browser-context`.
+- On macOS, Chrome automation and readable Chrome profile/session files for `browser-context`.
 - Local shell, git, process listing, shell history, and optional tmux for `terminal-context`.
-- On macOS, System Events access to Cursor or VS Code window metadata for `editor-context`.
+- On macOS, System Events access and readable Cursor/VS Code state files for `editor-context`.
 
 The skills should treat source systems as the source of truth. Local state, when added later, should store preferences, run history, recommendations, and action plans, not raw credentials or unnecessary private content.
 

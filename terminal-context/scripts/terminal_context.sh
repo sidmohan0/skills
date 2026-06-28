@@ -51,6 +51,24 @@ md_cell() {
   printf '%s' "${1:-}" | tr '\n' ' ' | sed 's/|/\\|/g'
 }
 
+run_osascript_file() {
+  local timeout_seconds="$1"
+  local script_file="$2"
+  local output_file pid killer
+  output_file="$(mktemp "${TMPDIR:-/tmp}/terminal-osascript.XXXXXX")"
+  osascript "$script_file" > "$output_file" 2>/dev/null &
+  pid="$!"
+  (
+    sleep "$timeout_seconds"
+    kill "$pid" 2>/dev/null || true
+  ) &
+  killer="$!"
+  wait "$pid" 2>/dev/null || true
+  kill "$killer" 2>/dev/null || true
+  cat "$output_file"
+  rm -f "$output_file"
+}
+
 echo "# Terminal Context"
 echo
 echo "- Script cwd: $PWD"
@@ -60,6 +78,76 @@ echo "- Virtualenv: ${VIRTUAL_ENV:-none}"
 echo "- Conda env: ${CONDA_DEFAULT_ENV:-none}"
 echo
 
+echo "## Terminal App Windows"
+terminal_script="$(mktemp "${TMPDIR:-/tmp}/terminal-windows.XXXXXX")"
+cat > "$terminal_script" <<'APPLESCRIPT'
+set outputLines to {}
+tell application "System Events"
+	set terminalRunning to exists application process "Terminal"
+	set itermRunning to exists application process "iTerm2"
+end tell
+if terminalRunning then
+	tell application "Terminal"
+		set windowIndex to 0
+		repeat with w in windows
+			set windowIndex to windowIndex + 1
+			set tabIndex to 0
+			repeat with t in tabs of w
+				set tabIndex to tabIndex + 1
+				set tabTitle to ""
+				set tabTTY to ""
+				try
+					set tabTitle to custom title of t
+				end try
+				try
+					set tabTTY to tty of t
+				end try
+				set end of outputLines to "Terminal" & tab & windowIndex & tab & tabIndex & tab & tabTTY & tab & tabTitle
+			end repeat
+		end repeat
+	end tell
+end if
+if itermRunning then
+	tell application "iTerm2"
+		set windowIndex to 0
+		repeat with w in windows
+			set windowIndex to windowIndex + 1
+			set tabIndex to 0
+			repeat with t in tabs of w
+				set tabIndex to tabIndex + 1
+				set sessionIndex to 0
+				repeat with s in sessions of t
+					set sessionIndex to sessionIndex + 1
+					set sessionName to ""
+					set sessionTTY to ""
+					try
+						set sessionName to name of s
+					end try
+					try
+						set sessionTTY to tty of s
+					end try
+					set end of outputLines to "iTerm2" & tab & windowIndex & tab & tabIndex & "." & sessionIndex & tab & sessionTTY & tab & sessionName
+				end repeat
+			end repeat
+		end repeat
+	end tell
+end if
+set text item delimiters of AppleScript to linefeed
+return outputLines as text
+APPLESCRIPT
+terminal_windows="$(run_osascript_file 4 "$terminal_script")"
+rm -f "$terminal_script"
+if [[ -z "$terminal_windows" ]]; then
+  echo "No Terminal or iTerm2 windows reported."
+else
+  echo '| App | Window | Tab/Session | TTY | Title |'
+  echo '|---|---:|---:|---|---|'
+  printf '%s\n' "$terminal_windows" | while IFS=$'\t' read -r app win tab tty title; do
+    printf '| %s | %s | %s | %s | %s |\n' "$(md_cell "$app")" "$(md_cell "$win")" "$(md_cell "$tab")" "$(md_cell "$tty")" "$(md_cell "$title")"
+  done
+fi
+
+echo
 echo "## Git"
 if git -C "$target_path" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   repo_root="$(git -C "$target_path" rev-parse --show-toplevel 2>/dev/null || true)"
@@ -91,32 +179,42 @@ fi
 
 echo
 echo "## Running Developer Processes"
-echo '| PID | State | Command |'
-echo '|---:|---|---|'
-ps -axo pid=,stat=,command= 2>/dev/null \
-  | python3 -c '
+echo '| PID | PPID | PGID | TTY | State | Elapsed | Command |'
+echo '|---:|---:|---:|---|---|---:|---|'
+ps -axo pid=,ppid=,pgid=,stat=,tty=,etime=,command= 2>/dev/null \
+  | TERMINAL_CONTEXT_SCRIPT_PID="$$" python3 -c '
 import os, shlex, sys
 names = {"npm", "pnpm", "yarn", "bun", "node", "python", "python3", "ruby", "cargo", "tmux", "ssh", "vite", "next"}
 phrases = ("go run",)
+shells = {"sh", "bash", "zsh", "fish"}
+self_script_pid = os.environ.get("TERMINAL_CONTEXT_SCRIPT_PID", "")
 self_pid = str(os.getpid())
 for line in sys.stdin:
-    parts = line.strip().split(None, 2)
-    if len(parts) < 3:
+    parts = line.strip().split(None, 6)
+    if len(parts) < 7:
         continue
-    if parts[0] == self_pid:
+    pid, ppid, pgid, stat, tty, etime, command = parts
+    if pid in {self_pid, self_script_pid}:
         continue
-    command = parts[2]
+    if "terminal_context.sh" in command:
+        continue
     try:
         tokens = shlex.split(command)
     except ValueError:
         tokens = command.split()
-    bases = {os.path.basename(token).lower().rstrip(":") for token in tokens if token}
-    if bases & names or any(phrase in command.lower() for phrase in phrases):
+    bases = [os.path.basename(token).lower().rstrip(":") for token in tokens if token]
+    first = bases[0] if bases else ""
+    token_names = set(bases)
+    is_match = first in names or (first in shells and bool(token_names & names))
+    if is_match or any(phrase in command.lower() for phrase in phrases):
         sys.stdout.write(line)
 ' \
   | head -n 30 \
-  | while read -r pid stat command; do
-      printf '| %s | %s | %s |\n' "$(md_cell "$pid")" "$(md_cell "$stat")" "$(md_cell "$command")"
+  | while read -r pid ppid pgid stat tty etime command; do
+      printf '| %s | %s | %s | %s | %s | %s | %s |\n' \
+        "$(md_cell "$pid")" "$(md_cell "$ppid")" "$(md_cell "$pgid")" \
+        "$(md_cell "$tty")" "$(md_cell "$stat")" "$(md_cell "$etime")" \
+        "$(md_cell "$command")"
     done
 
 echo

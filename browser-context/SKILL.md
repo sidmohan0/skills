@@ -1,6 +1,6 @@
 ---
 name: browser-context
-description: Read browser workspace context on macOS, especially Google Chrome work profiles, including open tabs, active tab, downloads, reading list, and honest availability status for pinned tabs and tab groups. Use when the user asks what tabs are open, what browser workspace they are in, what they were reading, what they downloaded, or when another skill needs browser context before acting.
+description: Read browser workspace context on macOS, especially Google Chrome work profiles, including open tabs, active tab, downloads, reading list, pinned-tab session metadata, and tab-group session metadata. Use when the user asks what tabs are open, what browser workspace they are in, what they were reading, what they downloaded, what is pinned or grouped in Chrome, or when another skill needs browser context before acting.
 ---
 
 # Browser Context
@@ -11,7 +11,7 @@ Use structured browser sources before screenshots:
 
 1. Use browser AppleScript for currently open tabs.
 2. Use Chrome profile files for downloads and reading list.
-3. Report tab groups and pinned tabs as unavailable unless a deterministic source is present; do not infer them from UI pixels.
+3. Use Chrome `Sessions/Session_*` files for pinned-tab and tab-group metadata when readable.
 
 Run the bundled script:
 
@@ -20,7 +20,7 @@ SKILL_DIR="${CODEX_SKILL_DIR:-$HOME/.codex/skills/browser-context}"
 bash "$SKILL_DIR/scripts/browser_context.sh"
 ```
 
-Default profile is `Work` for Chrome profile lookup. The script still lists open Chrome tabs from the running app because Chrome AppleScript does not expose profile ownership for each window.
+Default profile is `Work` for Chrome profile lookup. If that profile is not present, the script reports the fallback it used. The script still lists open Chrome tabs from the running app because Chrome AppleScript does not expose profile ownership for each window.
 
 ## Common Tasks
 
@@ -36,6 +36,12 @@ Use a different Chrome profile display name:
 bash "$SKILL_DIR/scripts/browser_context.sh" --profile "Personal"
 ```
 
+Use an exact Chrome profile directory:
+
+```bash
+bash "$SKILL_DIR/scripts/browser_context.sh" --profile-dir "$HOME/Library/Application Support/Google/Chrome/Default"
+```
+
 Increase tab/download/list limits:
 
 ```bash
@@ -46,4 +52,5 @@ bash "$SKILL_DIR/scripts/browser_context.sh" --limit 50
 
 - Read-only. Do not close tabs, open URLs, download files, or modify browser state.
 - Treat URLs, titles, downloads, and reading-list entries as private context.
+- Pinned-tab and tab-group sections are derived from Chrome session files and may expose tab IDs/group IDs before full title or URL mapping.
 - Label unavailable fields plainly; this is better than a false sense of coverage.

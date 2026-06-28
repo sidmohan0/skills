@@ -1,0 +1,11 @@
+.DS_Store
+.env
+.env.*
+*.log
+*.sqlite
+*.sqlite-*
+*.db
+state.sqlite
+config.local.toml
+outputs/
+tmp/

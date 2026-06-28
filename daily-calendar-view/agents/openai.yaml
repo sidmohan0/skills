@@ -1,0 +1,4 @@
+interface:
+  display_name: "Daily Calendar View"
+  short_description: "Daily agenda across calendars"
+  default_prompt: "Use $daily-calendar-view to show my calendar for today with important context."

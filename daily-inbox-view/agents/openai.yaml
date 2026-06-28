@@ -1,0 +1,4 @@
+interface:
+  display_name: "Daily Inbox View"
+  short_description: "Preview Apple Mail across accounts"
+  default_prompt: "Use $daily-inbox-view to check my Apple Mail accounts and preview today's inbox."

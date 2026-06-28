@@ -1,0 +1,4 @@
+interface:
+  display_name: "Terminal Context"
+  short_description: "Read shell and project context"
+  default_prompt: "Use $terminal-context to show what I am coding in Terminal."

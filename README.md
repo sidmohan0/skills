@@ -9,6 +9,10 @@ This repository is currently built around Codex as the primary agent runtime. Th
 - `CHARTER.md` is the shared safety charter every skill inherits.
 - `mac-context/` is the read-mostly "eyes" foundation for local macOS context.
 - `context-check/` fact-checks selected or provided text with sources.
+- `finder-context/` reports Finder selections, current folder, recent files, tags, and metadata.
+- `browser-context/` reports Chrome workspace context such as tabs, profile downloads, and reading list.
+- `terminal-context/` reports shell, git, process, history, virtualenv, and tmux context.
+- `editor-context/` reports Cursor/VS Code window and project context.
 - `daily-inbox-view/` previews and triages Apple Mail inboxes.
 - `daily-calendar-view/` builds a read-only daily calendar agenda from connected calendar sources.
 
@@ -90,6 +94,79 @@ Permission model:
 - State-changing actions require an explicit user request and are generated as inspectable AppleScript before execution.
 - Reply actions open draft compose windows only; the skill must not send mail.
 
+### `finder-context`
+
+Purpose: answer "what files am I working on?" from Finder and local file metadata.
+
+What it can do:
+
+- Report the current front Finder folder.
+- Report selected Finder files and folders.
+- Include file kind, size, modified date, last-used date, and Finder tags.
+- List recent files in the current folder when Spotlight metadata is available.
+
+Permission model:
+
+- Uses Finder AppleScript plus local `mdls`, `mdfind`, and `stat`.
+- Read-only; it must not move, rename, tag, delete, or open files.
+- Treats local paths and metadata as private context.
+- Reports Finder or Spotlight limitations plainly instead of guessing.
+
+### `browser-context`
+
+Purpose: summarize the local browser workspace, currently focused on Google Chrome.
+
+What it can do:
+
+- Report open Chrome windows and tabs through Chrome AppleScript.
+- Resolve a Chrome profile display name, defaulting to `Work`, for local profile-file reads.
+- Read recent downloads from a copied Chrome History database.
+- Read available reading-list entries from Chrome bookmarks data.
+- Mark pinned tabs and tab groups as unavailable until a deterministic source is added.
+
+Permission model:
+
+- Uses Chrome AppleScript and read-only copies of local Chrome profile files.
+- Read-only; it must not close tabs, open URLs, download files, or modify browser state.
+- Chrome AppleScript does not expose profile ownership per open tab, pinned state, or tab groups.
+- Treats URLs, titles, downloads, and reading-list entries as private context.
+
+### `terminal-context`
+
+Purpose: answer "what am I coding?" from shell, git, process, and tmux state.
+
+What it can do:
+
+- Report the script current directory and an optional target project path.
+- Show git root, branch, HEAD, and short working-tree status.
+- Show recent shell history from the readable local history file.
+- List likely running developer processes.
+- Show active `VIRTUAL_ENV`, active conda environment, and tmux sessions.
+
+Permission model:
+
+- Uses local shell, git, `ps`, shell history, and optional tmux commands.
+- Read-only; it must not kill processes, attach sessions, run package scripts, or mutate git state.
+- A non-interactive script cannot see live shell built-in `jobs` from another Terminal tab.
+- Treats command history and process arguments as private context.
+
+### `editor-context`
+
+Purpose: summarize Cursor or VS Code workspace context from deterministic local signals.
+
+What it can do:
+
+- Report running Cursor and VS Code windows.
+- Use window titles to infer active file and project names when the editor exposes them.
+- Show git diff stats and status for a supplied project path.
+- Mark cursor position, diagnostics, and precise selection as unavailable until an editor extension or explicit source exists.
+
+Permission model:
+
+- Uses System Events AppleScript and git.
+- Read-only; it must not edit files, save buffers, run formatters, or apply code actions.
+- For selected editor text, compose with `mac-context` selection capture when explicitly requested.
+
 ### `daily-calendar-view`
 
 Purpose: produce a read-only daily agenda from available calendar sources.
@@ -115,6 +192,7 @@ These skills assume an agent/runtime with:
 
 - Access to read skill files from the local filesystem.
 - Permission to run local shell scripts bundled with a skill.
+- Local Python 3 for scripts that parse browser, editor, and process state.
 - On macOS, permission to use AppleScript/System Events for local context.
 - On macOS, optional Accessibility, Automation, and Screen Recording permissions
   for `mac-context` modes that need them.
@@ -123,6 +201,10 @@ These skills assume an agent/runtime with:
 - On macOS, permission to control Apple Mail through AppleScript for Mail workflows.
 - Optional `cua-driver` access for launching apps and verifying windows; message and event selection should still be done with deterministic scripts/connectors.
 - Optional Google Calendar and Outlook Calendar connector access for calendar workflows.
+- On macOS, Finder automation plus Spotlight metadata commands for `finder-context`.
+- On macOS, Chrome automation and readable Chrome profile files for `browser-context`.
+- Local shell, git, process listing, shell history, and optional tmux for `terminal-context`.
+- On macOS, System Events access to Cursor or VS Code window metadata for `editor-context`.
 
 The skills should treat source systems as the source of truth. Local state, when added later, should store preferences, run history, recommendations, and action plans, not raw credentials or unnecessary private content.
 
@@ -150,6 +232,10 @@ Symlink a skill into Codex's global skills directory:
 ```bash
 ln -s "$PWD/mac-context" "$HOME/.codex/skills/mac-context"
 ln -s "$PWD/context-check" "$HOME/.codex/skills/context-check"
+ln -s "$PWD/finder-context" "$HOME/.codex/skills/finder-context"
+ln -s "$PWD/browser-context" "$HOME/.codex/skills/browser-context"
+ln -s "$PWD/terminal-context" "$HOME/.codex/skills/terminal-context"
+ln -s "$PWD/editor-context" "$HOME/.codex/skills/editor-context"
 ln -s "$PWD/daily-inbox-view" "$HOME/.codex/skills/daily-inbox-view"
 ln -s "$PWD/daily-calendar-view" "$HOME/.codex/skills/daily-calendar-view"
 ```

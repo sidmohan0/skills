@@ -1,0 +1,4 @@
+interface:
+  display_name: "Finder Context"
+  short_description: "Read Finder files and metadata"
+  default_prompt: "Use $finder-context to show what files I am working on."

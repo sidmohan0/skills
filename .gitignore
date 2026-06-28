@@ -7,5 +7,6 @@
 *.db
 state.sqlite
 config.local.toml
+*.local.toml
 outputs/
 tmp/

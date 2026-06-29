@@ -120,6 +120,7 @@ What it can do:
 
 - Report open Chrome windows and tabs through Chrome AppleScript.
 - Resolve a Chrome profile display name, defaulting to `Work`, for local profile-file reads.
+- Read profile session tabs with titles and URLs from Chrome session files when available.
 - Read recent downloads from a copied Chrome History database.
 - Read available reading-list entries from Chrome bookmarks data.
 - Read pinned-tab and tab-group metadata from Chrome session files when available.
@@ -129,7 +130,7 @@ Permission model:
 - Uses Chrome AppleScript and read-only copies of local Chrome profile files.
 - Read-only; it must not close tabs, open URLs, download files, or modify browser state.
 - Chrome AppleScript does not expose profile ownership per open tab.
-- Session-derived pinned/tab-group output may expose tab IDs/group IDs before full title or URL mapping.
+- Session-derived output maps tab IDs/group IDs to titles and URLs when navigation entries are present.
 - Treats URLs, titles, downloads, and reading-list entries as private context.
 
 ### `terminal-context`

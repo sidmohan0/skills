@@ -5,6 +5,7 @@
 *.sqlite
 *.sqlite-*
 *.db
+__pycache__/
 state.sqlite
 config.local.toml
 *.local.toml

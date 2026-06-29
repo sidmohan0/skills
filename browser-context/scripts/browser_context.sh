@@ -61,6 +61,7 @@ md_cell() {
 }
 
 chrome_base="${HOME}/Library/Application Support/Google/Chrome"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 profile_info="$(
 python3 - "$chrome_base" "$profile_name" "$profile_dir_override" <<'PY'
@@ -150,210 +151,14 @@ else
 fi
 
 echo
-echo "## Pinned Tabs"
 if [[ -z "$profile_dir" || ! -d "$profile_dir/Sessions" ]]; then
+  echo "## Pinned Tabs"
   echo "Pinned tabs unavailable: Chrome profile session directory is not readable."
-else
-  python3 - "$profile_dir" "$limit" <<'PY'
-import datetime as dt
-import glob
-import os
-import struct
-import sys
-
-profile_dir, limit = sys.argv[1], int(sys.argv[2])
-
-def esc(value):
-    return str(value or "").replace("|", "\\|").replace("\n", " ")
-
-def group_key(payload):
-    if len(payload) < 25 or payload[24] == 0:
-        return ""
-    high = struct.unpack_from("<Q", payload, 8)[0]
-    low = struct.unpack_from("<Q", payload, 16)[0]
-    if high == 0 and low == 0:
-        return ""
-    return f"{high:016x}:{low:016x}"
-
-def latest_session_file(root):
-    files = glob.glob(os.path.join(root, "Sessions", "Session_*"))
-    return max(files, key=os.path.getmtime) if files else ""
-
-def iter_records(path):
-    data = open(path, "rb").read()
-    if len(data) < 8 or data[:4] != b"SNSS":
-        return
-    offset = 8
-    while offset + 2 <= len(data):
-        size = struct.unpack_from("<H", data, offset)[0]
-        offset += 2
-        record = data[offset:offset + size]
-        offset += size
-        if record:
-            yield record[0], record[1:]
-
-path = latest_session_file(profile_dir)
-if not path:
-    print("Pinned tabs unavailable: no Chrome Session_* files found.")
-    raise SystemExit
-
-pinned = {}
-groups = {}
-for command_id, payload in iter_records(path):
-    if command_id == 12 and len(payload) >= 5:
-        tab_id = struct.unpack_from("<i", payload, 0)[0]
-        pinned[tab_id] = payload[4] != 0
-    elif command_id == 25 and len(payload) >= 25:
-        tab_id = struct.unpack_from("<i", payload, 0)[0]
-        key = group_key(payload)
-        if key:
-            groups[tab_id] = key
-        else:
-            groups.pop(tab_id, None)
-
-modified = dt.datetime.fromtimestamp(os.path.getmtime(path)).strftime("%Y-%m-%d %H:%M:%S")
-print(f"- Source: `{esc(os.path.relpath(path, profile_dir))}`")
-print(f"- Source modified: {modified}")
-active = [tab_id for tab_id, value in pinned.items() if value]
-if not active:
-    print("No pinned tabs recorded in latest Chrome session metadata.")
-else:
-    print("| Tab ID | Group ID |")
-    print("|---:|---|")
-    for tab_id in active[:limit]:
-        print(f"| {tab_id} | {esc(groups.get(tab_id, ''))} |")
-PY
-fi
-
-echo
-echo "## Tab Groups"
-if [[ -z "$profile_dir" || ! -d "$profile_dir/Sessions" ]]; then
+  echo
+  echo "## Tab Groups"
   echo "Tab groups unavailable: Chrome profile session directory is not readable."
 else
-  python3 - "$profile_dir" "$limit" <<'PY'
-import datetime as dt
-import glob
-import os
-import struct
-import sys
-
-profile_dir, limit = sys.argv[1], int(sys.argv[2])
-
-def esc(value):
-    return str(value or "").replace("|", "\\|").replace("\n", " ")
-
-def group_key(payload):
-    if len(payload) < 25 or payload[24] == 0:
-        return ""
-    high = struct.unpack_from("<Q", payload, 8)[0]
-    low = struct.unpack_from("<Q", payload, 16)[0]
-    if high == 0 and low == 0:
-        return ""
-    return f"{high:016x}:{low:016x}"
-
-def align4(pos):
-    return (pos + 3) & ~3
-
-def read_group_metadata(payload):
-    if len(payload) < 24:
-        return None
-    pos = 4
-    high = struct.unpack_from("<Q", payload, pos)[0]
-    pos += 8
-    low = struct.unpack_from("<Q", payload, pos)[0]
-    pos += 8
-    key = f"{high:016x}:{low:016x}"
-    if len(payload) < pos + 4:
-        return key, "", "", "", ""
-    title_len = struct.unpack_from("<i", payload, pos)[0]
-    pos += 4
-    title = ""
-    if 0 <= title_len <= 4096 and len(payload) >= pos + title_len * 2:
-        raw = payload[pos:pos + title_len * 2]
-        title = raw.decode("utf-16-le", "replace")
-        pos = align4(pos + title_len * 2)
-    color = ""
-    collapsed = ""
-    saved_guid = ""
-    if len(payload) >= pos + 4:
-        color = str(struct.unpack_from("<I", payload, pos)[0])
-        pos += 4
-    if len(payload) >= pos + 4:
-        collapsed = str(payload[pos] != 0).lower()
-        pos += 4
-    if len(payload) >= pos + 4:
-        is_saved = payload[pos] != 0
-        pos += 4
-        if is_saved and len(payload) >= pos + 4:
-            saved_len = struct.unpack_from("<i", payload, pos)[0]
-            pos += 4
-            if 0 <= saved_len <= 4096 and len(payload) >= pos + saved_len:
-                saved_guid = payload[pos:pos + saved_len].decode("utf-8", "replace")
-    return key, title, color, collapsed, saved_guid
-
-def latest_session_file(root):
-    files = glob.glob(os.path.join(root, "Sessions", "Session_*"))
-    return max(files, key=os.path.getmtime) if files else ""
-
-def iter_records(path):
-    data = open(path, "rb").read()
-    if len(data) < 8 or data[:4] != b"SNSS":
-        return
-    offset = 8
-    while offset + 2 <= len(data):
-        size = struct.unpack_from("<H", data, offset)[0]
-        offset += 2
-        record = data[offset:offset + size]
-        offset += size
-        if record:
-            yield record[0], record[1:]
-
-path = latest_session_file(profile_dir)
-if not path:
-    print("Tab groups unavailable: no Chrome Session_* files found.")
-    raise SystemExit
-
-tab_groups = {}
-metadata = {}
-for command_id, payload in iter_records(path):
-    if command_id == 25 and len(payload) >= 25:
-        tab_id = struct.unpack_from("<i", payload, 0)[0]
-        key = group_key(payload)
-        if key:
-            tab_groups[tab_id] = key
-        else:
-            tab_groups.pop(tab_id, None)
-    elif command_id == 27:
-        parsed = read_group_metadata(payload)
-        if parsed:
-            key, title, color, collapsed, saved_guid = parsed
-            metadata[key] = {
-                "title": title,
-                "color": color,
-                "collapsed": collapsed,
-                "saved_guid": saved_guid,
-            }
-
-modified = dt.datetime.fromtimestamp(os.path.getmtime(path)).strftime("%Y-%m-%d %H:%M:%S")
-print(f"- Source: `{esc(os.path.relpath(path, profile_dir))}`")
-print(f"- Source modified: {modified}")
-groups_to_tabs = {}
-for tab_id, key in tab_groups.items():
-    groups_to_tabs.setdefault(key, []).append(tab_id)
-if not groups_to_tabs:
-    print("No tab groups recorded in latest Chrome session metadata.")
-else:
-    print("| Group ID | Tab IDs | Title | Color | Collapsed | Saved GUID |")
-    print("|---|---|---|---:|---|---|")
-    for key in sorted(groups_to_tabs, key=lambda item: (metadata.get(item, {}).get("title", ""), item))[:limit]:
-        meta = metadata.get(key, {})
-        tabs = ", ".join(str(tab_id) for tab_id in sorted(groups_to_tabs[key]))
-        print(
-            f"| {esc(key)} | {esc(tabs)} | {esc(meta.get('title', ''))} | "
-            f"{esc(meta.get('color', ''))} | {esc(meta.get('collapsed', ''))} | "
-            f"{esc(meta.get('saved_guid', ''))} |"
-        )
-PY
+  python3 "$script_dir/chrome_session_context.py" "$profile_dir" "$limit"
 fi
 
 echo

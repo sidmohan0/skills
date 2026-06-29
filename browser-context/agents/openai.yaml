@@ -1,4 +1,0 @@
-interface:
-  display_name: "Browser Context"
-  short_description: "Read browser workspace context"
-  default_prompt: "Use $browser-context to summarize my browser workspace."

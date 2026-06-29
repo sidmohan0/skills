@@ -1,4 +1,0 @@
-interface:
-  display_name: "Editor Context"
-  short_description: "Read VS Code and Cursor context"
-  default_prompt: "Use $editor-context to summarize my active editor project."

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Mac Context"
-  short_description: "Read-only eyes for the macOS session"
-  default_prompt: "Use $mac-context to tell me what I'm currently looking at on screen."

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Context Check"
-  short_description: "Fact-check selected text with sources"
-  default_prompt: "Use $context-check to fact-check my selected text with sources."

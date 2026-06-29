@@ -16,7 +16,7 @@ SKILL_DIR="${CODEX_SKILL_DIR:-$HOME/.codex/skills/editor-context}"
 bash "$SKILL_DIR/scripts/editor_context.sh"
 ```
 
-Default behavior reports running Cursor/VS Code windows, persisted editor hints, Accessibility cursor/range metadata, diagnostics hints, and git context for the current directory when available.
+Default behavior reports running Cursor/VS Code windows, persisted editor hints, Accessibility cursor/range metadata, diagnostics hints, and git context for the current directory when available. Running-window title inference is handled by `scripts/editor_window_context.py`.
 
 ## Common Tasks
 

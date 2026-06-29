@@ -38,6 +38,10 @@ finder_item = load_module(
     "finder_item_context",
     REPO_ROOT / "finder-context" / "scripts" / "finder_item_context.py",
 )
+editor_window = load_module(
+    "editor_window_context",
+    REPO_ROOT / "editor-context" / "scripts" / "editor_window_context.py",
+)
 
 
 def pad4(data):
@@ -318,6 +322,35 @@ class EditorStateContextTests(unittest.TestCase):
             self.assertIn("README.md", output)
             self.assertIn("### Diagnostics Hints", output)
             self.assertIn("unused import", output)
+
+
+class EditorWindowContextTests(unittest.TestCase):
+    def test_window_title_inference_for_editor_suffixes(self):
+        self.assertEqual(
+            editor_window.infer_title("README.md - skills - Cursor", "Cursor"),
+            {"active_file": "README.md", "project": "skills"},
+        )
+        self.assertEqual(
+            editor_window.infer_title("app.py \u2014 sample-project \u2014 Visual Studio Code", "Visual Studio Code"),
+            {"active_file": "app.py", "project": "sample-project"},
+        )
+        self.assertEqual(
+            editor_window.infer_title("server.ts - web-app - Code - Insiders", "Code - Insiders"),
+            {"active_file": "server.ts", "project": "web-app"},
+        )
+        self.assertEqual(
+            editor_window.infer_title("skills - Cursor", "Cursor"),
+            {"active_file": "", "project": "skills"},
+        )
+        self.assertEqual(
+            editor_window.infer_title("Untitled-1 - Visual Studio Code", "Visual Studio Code"),
+            {"active_file": "Untitled-1", "project": ""},
+        )
+
+    def test_window_markdown_rows_escape_values(self):
+        row = editor_window.markdown_row("Cursor", "1", "notes|draft.md - project|x - Cursor")
+        self.assertIn("notes\\|draft.md", row)
+        self.assertIn("project\\|x", row)
 
 
 class TerminalProcessContextTests(unittest.TestCase):

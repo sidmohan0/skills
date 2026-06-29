@@ -112,21 +112,7 @@ if [[ -z "$window_output" ]]; then
 else
   echo '| App | Window | Title | Inferred Active File | Inferred Project |'
   echo '|---|---:|---|---|---|'
-  printf '%s\n' "$window_output" | while IFS=$'\t' read -r app win title; do
-    inferred="$(
-      python3 - "$title" <<'PY'
-import re, sys
-title = sys.argv[1] if len(sys.argv) > 1 else ""
-parts = re.split(r"\s+[-\u2014]\s+", title)
-active = parts[0] if parts else ""
-project = parts[-1] if len(parts) > 1 else ""
-print(active + "\t" + project)
-PY
-    )"
-    active_file="$(printf '%s' "$inferred" | cut -f1)"
-    project="$(printf '%s' "$inferred" | cut -f2-)"
-    printf '| %s | %s | %s | %s | %s |\n' "$(md_cell "$app")" "$(md_cell "$win")" "$(md_cell "$title")" "$(md_cell "$active_file")" "$(md_cell "$project")"
-  done
+  printf '%s\n' "$window_output" | python3 "$script_dir/editor_window_context.py"
 fi
 
 echo

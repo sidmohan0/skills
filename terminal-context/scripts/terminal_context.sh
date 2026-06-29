@@ -3,6 +3,7 @@ set -euo pipefail
 
 target_path="$PWD"
 history_limit=15
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() {
   cat <<'USAGE'
@@ -182,40 +183,7 @@ echo "## Running Developer Processes"
 echo '| PID | PPID | PGID | TTY | State | Elapsed | Command |'
 echo '|---:|---:|---:|---|---|---:|---|'
 ps -axo pid=,ppid=,pgid=,stat=,tty=,etime=,command= 2>/dev/null \
-  | TERMINAL_CONTEXT_SCRIPT_PID="$$" python3 -c '
-import os, shlex, sys
-names = {"npm", "pnpm", "yarn", "bun", "node", "python", "python3", "ruby", "cargo", "tmux", "ssh", "vite", "next"}
-phrases = ("go run",)
-shells = {"sh", "bash", "zsh", "fish"}
-self_script_pid = os.environ.get("TERMINAL_CONTEXT_SCRIPT_PID", "")
-self_pid = str(os.getpid())
-for line in sys.stdin:
-    parts = line.strip().split(None, 6)
-    if len(parts) < 7:
-        continue
-    pid, ppid, pgid, stat, tty, etime, command = parts
-    if pid in {self_pid, self_script_pid}:
-        continue
-    if "terminal_context.sh" in command:
-        continue
-    try:
-        tokens = shlex.split(command)
-    except ValueError:
-        tokens = command.split()
-    bases = [os.path.basename(token).lower().rstrip(":") for token in tokens if token]
-    first = bases[0] if bases else ""
-    token_names = set(bases)
-    is_match = first in names or (first in shells and bool(token_names & names))
-    if is_match or any(phrase in command.lower() for phrase in phrases):
-        sys.stdout.write(line)
-' \
-  | head -n 30 \
-  | while read -r pid ppid pgid stat tty etime command; do
-      printf '| %s | %s | %s | %s | %s | %s | %s |\n' \
-        "$(md_cell "$pid")" "$(md_cell "$ppid")" "$(md_cell "$pgid")" \
-        "$(md_cell "$tty")" "$(md_cell "$stat")" "$(md_cell "$etime")" \
-        "$(md_cell "$command")"
-    done
+  | TERMINAL_CONTEXT_SCRIPT_PID="$$" python3 "$script_dir/terminal_process_context.py" --limit 30
 
 echo
 echo "## tmux"

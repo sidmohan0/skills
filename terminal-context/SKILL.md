@@ -16,7 +16,7 @@ SKILL_DIR="${CODEX_SKILL_DIR:-$HOME/.codex/skills/terminal-context}"
 bash "$SKILL_DIR/scripts/terminal_context.sh"
 ```
 
-Default behavior reports context for the process current directory, Terminal/iTerm windows when visible to AppleScript, and likely developer jobs grouped by PID/PPID/PGID/TTY.
+Default behavior reports context for the process current directory, Terminal/iTerm windows when visible to AppleScript, and likely developer jobs grouped by PID/PPID/PGID/TTY. Running-job detection is delegated to `scripts/terminal_process_context.py` so process filtering can be tested with synthetic `ps` rows.
 
 ## Common Tasks
 

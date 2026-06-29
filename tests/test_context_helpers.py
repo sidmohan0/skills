@@ -25,6 +25,10 @@ chrome_session = load_module(
     "chrome_session_context",
     REPO_ROOT / "browser-context" / "scripts" / "chrome_session_context.py",
 )
+terminal_process = load_module(
+    "terminal_process_context",
+    REPO_ROOT / "terminal-context" / "scripts" / "terminal_process_context.py",
+)
 
 
 def pad4(data):
@@ -186,6 +190,38 @@ class EditorStateContextTests(unittest.TestCase):
             self.assertIn("README.md", output)
             self.assertIn("### Diagnostics Hints", output)
             self.assertIn("unused import", output)
+
+
+class TerminalProcessContextTests(unittest.TestCase):
+    def test_process_filter_includes_dev_jobs_and_excludes_false_positives(self):
+        rows = [
+            "100 1 100 S ttys001 00:10 npm run dev",
+            "101 1 101 S ttys001 00:11 /bin/bash -lc 'node server.js'",
+            "102 1 102 S ttys001 00:12 go run ./cmd/api",
+            "103 1 103 S ttys001 00:13 tmux new-session -s work",
+            "104 1 104 S ?? 00:14 ssh: user@host [mux]",
+            "105 1 105 S ttys001 00:15 /bin/bash -lc \"sed -n '/## tmux/p' terminal-context/scripts/terminal_context.sh\"",
+            "106 1 106 S ttys001 00:16 python3 terminal-context/scripts/terminal_process_context.py",
+            "107 1 107 S ttys001 00:17 sed -n /node/p README.md",
+            "108 1 108 S ttys001 00:18 python3 manage.py runserver",
+        ]
+
+        candidates = list(terminal_process.iter_candidates(rows))
+        commands = [row.command for row in candidates]
+
+        self.assertEqual(
+            commands,
+            [
+                "npm run dev",
+                "/bin/bash -lc 'node server.js'",
+                "go run ./cmd/api",
+                "tmux new-session -s work",
+                "ssh: user@host [mux]",
+                "python3 manage.py runserver",
+            ],
+        )
+        self.assertIn("\\|", terminal_process.md_cell("left|right"))
+        self.assertIn("python3 manage.py runserver", terminal_process.markdown_row(candidates[-1]))
 
 
 if __name__ == "__main__":

@@ -246,6 +246,14 @@ ln -s "$PWD/daily-inbox-view" "$HOME/.codex/skills/daily-inbox-view"
 ln -s "$PWD/daily-calendar-view" "$HOME/.codex/skills/daily-calendar-view"
 ```
 
+## Test
+
+Run deterministic parser tests without reading private local app state:
+
+```bash
+python3 tests/test_context_helpers.py
+```
+
 ## Configuration
 
 These skills do not require a committed `.env`.

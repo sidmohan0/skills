@@ -49,7 +49,8 @@ def latest_session_file(profile_dir):
 
 
 def iter_records(path):
-    data = open(path, "rb").read()
+    with open(path, "rb") as handle:
+        data = handle.read()
     if len(data) < 8 or data[:4] != b"SNSS":
         return
     offset = 8

@@ -110,17 +110,6 @@ echo
 echo "## Recent Files"
 if [[ -z "$current_folder" || ! -d "$current_folder" ]]; then
   echo "Recent files unavailable: current folder is not available."
-elif ! command -v mdfind >/dev/null 2>&1; then
-  echo "Recent files unavailable: mdfind is not available."
 else
-  recent_tmp="$(mktemp "${TMPDIR:-/tmp}/finder-recent.XXXXXX")"
-  mdfind -onlyin "$current_folder" 'kMDItemFSContentChangeDate >= $time.today(-14)' 2>/dev/null | head -n "$recent_limit" > "$recent_tmp" || true
-  if [[ ! -s "$recent_tmp" ]]; then
-    echo "No recent Spotlight results for this folder."
-  else
-    echo '| Path | Kind | Size | Modified | Last Used | Finder Tags |'
-    echo '|---|---:|---:|---|---|---|'
-    python3 "$script_dir/finder_item_context.py" < "$recent_tmp"
-  fi
-  rm -f "$recent_tmp"
+  python3 "$script_dir/finder_recent_context.py" "$current_folder" "$recent_limit"
 fi

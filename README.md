@@ -103,14 +103,14 @@ What it can do:
 - Report the current front Finder folder.
 - Report selected Finder files and folders.
 - Include file kind, size, modified date, last-used date, and Finder tags.
-- List recent files in the current folder when Spotlight metadata is available.
+- List recent files in the current folder, preferring Spotlight metadata and falling back to local file mtimes.
 
 Permission model:
 
-- Uses Finder AppleScript plus local `mdls`, `mdfind`, and `stat`.
+- Uses Finder AppleScript plus local `mdls`, optional `mdfind`, and filesystem metadata.
 - Read-only; it must not move, rename, tag, delete, or open files.
 - Treats local paths and metadata as private context.
-- Reports Finder or Spotlight limitations plainly instead of guessing.
+- Reports Finder, Spotlight, or filesystem-scan limitations plainly instead of guessing.
 
 ### `browser-context`
 

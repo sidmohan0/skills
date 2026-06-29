@@ -21,7 +21,7 @@ Default behavior prints a Markdown snapshot with:
 - Current front Finder folder.
 - Selected Finder items.
 - File kind, size, modified date, last-used date, and Finder tags, rendered through `scripts/finder_item_context.py`.
-- Recent files in the current Finder folder when Spotlight can provide them.
+- Recent files in the current Finder folder, preferring Spotlight and falling back to local filesystem mtimes through `scripts/finder_recent_context.py`.
 
 ## Common Tasks
 
@@ -47,4 +47,4 @@ bash "$SKILL_DIR/scripts/finder_context.sh" --folder "$PWD"
 
 - Read-only. Do not move, rename, tag, delete, or open files from this skill.
 - Treat paths and metadata as private context. Echo only what the task needs.
-- If Finder or Spotlight is unavailable, report the missing source instead of guessing.
+- If Finder, Spotlight, or filesystem scanning is unavailable, report the missing source instead of guessing.

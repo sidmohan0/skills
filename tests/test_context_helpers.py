@@ -38,6 +38,10 @@ finder_item = load_module(
     "finder_item_context",
     REPO_ROOT / "finder-context" / "scripts" / "finder_item_context.py",
 )
+finder_recent = load_module(
+    "finder_recent_context",
+    REPO_ROOT / "finder-context" / "scripts" / "finder_recent_context.py",
+)
 editor_window = load_module(
     "editor_window_context",
     REPO_ROOT / "editor-context" / "scripts" / "editor_window_context.py",
@@ -255,6 +259,49 @@ class FinderItemContextTests(unittest.TestCase):
         missing = finder_item.item_metadata("/tmp/definitely-missing-finder-context-file")
         self.assertEqual(missing["kind"], "missing")
         self.assertEqual(missing["tags"], "")
+
+
+class FinderRecentContextTests(unittest.TestCase):
+    def test_recent_files_sort_filter_and_limit_candidates(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            older = root / "older.txt"
+            newer = root / "newer.txt"
+            nested = root / "nested"
+            nested.mkdir()
+            nested_file = nested / "nested.txt"
+            ignored_dir = root / "subdir"
+            ignored_dir.mkdir()
+            outside = root.parent / "outside-finder-recent.txt"
+
+            for path in (older, newer, nested_file, outside):
+                path.write_text(path.name, encoding="utf-8")
+
+            os.utime(older, (100, 100))
+            os.utime(nested_file, (200, 200))
+            os.utime(newer, (300, 300))
+            os.utime(outside, (400, 400))
+
+            paths = finder_recent.recent_files(
+                str(root),
+                2,
+                candidate_paths=[str(older), str(outside), str(ignored_dir), str(newer), str(nested_file), str(newer)],
+            )
+            self.assertEqual(paths, [str(newer), str(nested_file)])
+
+    def test_filesystem_recent_fallback_skips_noisy_directories(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            visible = root / "visible.txt"
+            noisy = root / "node_modules"
+            noisy.mkdir()
+            hidden = noisy / "hidden.txt"
+            visible.write_text("visible", encoding="utf-8")
+            hidden.write_text("hidden", encoding="utf-8")
+
+            paths = finder_recent.filesystem_recent_paths(str(root))
+            self.assertIn(str(visible), paths)
+            self.assertNotIn(str(hidden), paths)
 
 
 class EditorStateContextTests(unittest.TestCase):

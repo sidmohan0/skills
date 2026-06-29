@@ -198,7 +198,7 @@ These skills assume an agent/runtime with:
 
 - Access to read skill files from the local filesystem.
 - Permission to run local shell scripts bundled with a skill.
-- Local Python 3 for scripts that parse browser, editor, and process state.
+- Local Python 3 for scripts that parse Finder metadata, browser, editor, and process state.
 - On macOS, permission to use AppleScript/System Events for local context.
 - On macOS, optional Accessibility, Automation, and Screen Recording permissions
   for `mac-context` modes that need them.

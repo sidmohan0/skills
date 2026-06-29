@@ -12,6 +12,7 @@ USAGE
 
 folder_override=""
 recent_limit=12
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -46,38 +47,6 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ "$recent_limit" =~ ^[0-9]+$ ]] || { echo "--recent-limit must be numeric" >&2; exit 2; }
-
-md_cell() {
-  printf '%s' "${1:-}" | tr '\n' ' ' | sed 's/|/\\|/g'
-}
-
-md_raw() {
-  local key="$1"
-  local path="$2"
-  mdls -raw -name "$key" "$path" 2>/dev/null | tr '\n' ' ' | sed 's/[[:space:]]*$//' || true
-}
-
-clean_mdls() {
-  local value="${1:-}"
-  case "$value" in
-    ""|"(null)"|"null") printf '' ;;
-    *) printf '%s' "$value" | sed 's/^(\(.*\))$/\1/' | sed 's/"//g' ;;
-  esac
-}
-
-file_row() {
-  local path="$1"
-  local kind size modified last_used tags
-  kind="$(clean_mdls "$(md_raw kMDItemKind "$path")")"
-  [[ -n "$kind" ]] || kind="$(test -d "$path" && echo Folder || echo File)"
-  size="$(stat -f "%z" "$path" 2>/dev/null || true)"
-  modified="$(stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "$path" 2>/dev/null || true)"
-  last_used="$(clean_mdls "$(md_raw kMDItemLastUsedDate "$path")")"
-  tags="$(clean_mdls "$(md_raw kMDItemUserTags "$path")")"
-  printf '| `%s` | %s | %s | %s | %s | %s |\n' \
-    "$(md_cell "$path")" "$(md_cell "$kind")" "$(md_cell "$size")" \
-    "$(md_cell "$modified")" "$(md_cell "$last_used")" "$(md_cell "$tags")"
-}
 
 finder_output="$(
 osascript <<'APPLESCRIPT' 2>/dev/null || true
@@ -133,9 +102,7 @@ if [[ ! -s "$selected_tmp" ]]; then
 else
   echo '| Path | Kind | Size | Modified | Last Used | Finder Tags |'
   echo '|---|---:|---:|---|---|---|'
-  while IFS= read -r path; do
-    [[ -e "$path" ]] && file_row "$path" || printf '| `%s` | missing |  |  |  |  |\n' "$(md_cell "$path")"
-  done < "$selected_tmp"
+  python3 "$script_dir/finder_item_context.py" < "$selected_tmp"
 fi
 rm -f "$selected_tmp"
 
@@ -153,9 +120,7 @@ else
   else
     echo '| Path | Kind | Size | Modified | Last Used | Finder Tags |'
     echo '|---|---:|---:|---|---|---|'
-    while IFS= read -r path; do
-      [[ -e "$path" ]] && file_row "$path"
-    done < "$recent_tmp"
+    python3 "$script_dir/finder_item_context.py" < "$recent_tmp"
   fi
   rm -f "$recent_tmp"
 fi

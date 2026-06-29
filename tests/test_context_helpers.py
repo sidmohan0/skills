@@ -29,6 +29,10 @@ terminal_process = load_module(
     "terminal_process_context",
     REPO_ROOT / "terminal-context" / "scripts" / "terminal_process_context.py",
 )
+finder_item = load_module(
+    "finder_item_context",
+    REPO_ROOT / "finder-context" / "scripts" / "finder_item_context.py",
+)
 
 
 def pad4(data):
@@ -123,6 +127,40 @@ class ChromeSessionContextTests(unittest.TestCase):
             self.assertEqual(metadata[group_key]["color"], "4")
             self.assertEqual(metadata[group_key]["collapsed"], "true")
             self.assertEqual(metadata[group_key]["saved_guid"], "saved-guid-1")
+
+
+class FinderItemContextTests(unittest.TestCase):
+    def test_clean_mdls_and_markdown_rendering(self):
+        self.assertEqual(finder_item.clean_mdls("(null)"), "")
+        self.assertEqual(finder_item.clean_mdls('("Red", "Needs|Review")'), "Red, Needs|Review")
+        self.assertEqual(finder_item.clean_mdls("public.python-script"), "public.python-script")
+
+        row = finder_item.markdown_row(
+            {
+                "path": "/tmp/project/notes|draft.md",
+                "kind": "Markdown Document",
+                "size": "42",
+                "modified": "2026-06-29 09:30:00",
+                "last_used": "2026-06-29 10:00:00",
+                "tags": "Red, Needs|Review",
+            }
+        )
+        self.assertIn("notes\\|draft.md", row)
+        self.assertIn("Needs\\|Review", row)
+
+    def test_item_metadata_for_existing_and_missing_paths(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "example.txt"
+            path.write_text("hello", encoding="utf-8")
+            metadata = finder_item.item_metadata(str(path))
+            self.assertEqual(metadata["path"], str(path))
+            self.assertEqual(metadata["size"], "5")
+            self.assertTrue(metadata["modified"])
+            self.assertIn(metadata["kind"], {"File", "Plain Text Document", "TextEdit Document"})
+
+        missing = finder_item.item_metadata("/tmp/definitely-missing-finder-context-file")
+        self.assertEqual(missing["kind"], "missing")
+        self.assertEqual(missing["tags"], "")
 
 
 class EditorStateContextTests(unittest.TestCase):

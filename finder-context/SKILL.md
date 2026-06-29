@@ -20,7 +20,7 @@ Default behavior prints a Markdown snapshot with:
 
 - Current front Finder folder.
 - Selected Finder items.
-- File kind, size, modified date, last-used date, and Finder tags.
+- File kind, size, modified date, last-used date, and Finder tags, rendered through `scripts/finder_item_context.py`.
 - Recent files in the current Finder folder when Spotlight can provide them.
 
 ## Common Tasks

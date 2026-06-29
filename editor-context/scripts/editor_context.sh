@@ -3,10 +3,11 @@ set -euo pipefail
 
 target_path="$PWD"
 include_selection="false"
+state_root=""
 
 usage() {
   cat <<'USAGE'
-Usage: editor_context.sh [--path PATH] [--include-selection]
+Usage: editor_context.sh [--path PATH] [--state-root PATH] [--include-selection]
 
 Read-only VS Code/Cursor context: running apps, front window title, inferred
 active file/project, persisted editor hints, optional selected text, and git
@@ -29,6 +30,15 @@ while [[ $# -gt 0 ]]; do
       include_selection="true"
       shift
       ;;
+    --state-root)
+      [[ $# -ge 2 ]] || { echo "Missing value for --state-root" >&2; exit 2; }
+      state_root="$2"
+      shift 2
+      ;;
+    --state-root=*)
+      state_root="${1#--state-root=}"
+      shift
+      ;;
     -h|--help)
       usage
       exit 0
@@ -44,6 +54,8 @@ done
 md_cell() {
   printf '%s' "${1:-}" | tr '\n' ' ' | sed 's/|/\\|/g'
 }
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 run_osascript_file() {
   local timeout_seconds="$1"
@@ -119,101 +131,11 @@ fi
 
 echo
 echo "## Persisted Editor State"
-python3 - "$target_path" <<'PY'
-import datetime as dt
-import glob
-import json
-import os
-import sqlite3
-import sys
-from urllib.parse import unquote, urlparse
-
-target_path = os.path.abspath(os.path.expanduser(sys.argv[1]))
-home = os.path.expanduser("~")
-apps = [
-    ("Cursor", os.path.join(home, "Library/Application Support/Cursor")),
-    ("VS Code", os.path.join(home, "Library/Application Support/Code")),
-    ("VS Code Insiders", os.path.join(home, "Library/Application Support/Code - Insiders")),
-    ("VSCodium", os.path.join(home, "Library/Application Support/VSCodium")),
-]
-
-def esc(value):
-    return str(value or "").replace("|", "\\|").replace("\n", " ")
-
-def from_file_uri(value):
-    if not isinstance(value, str):
-        return ""
-    parsed = urlparse(value)
-    if parsed.scheme == "file":
-        return unquote(parsed.path)
-    return value
-
-def short_path(path):
-    if path.startswith(home + os.sep):
-        return "~/" + os.path.relpath(path, home)
-    return path
-
-rows = []
-hints = []
-for app_name, root in apps:
-    if not os.path.isdir(root):
-        continue
-    storage = os.path.join(root, "User", "globalStorage", "storage.json")
-    if os.path.exists(storage):
-        try:
-            data = json.load(open(storage))
-        except Exception:
-            data = {}
-        for key, value in data.items():
-            key_l = key.lower()
-            if any(term in key_l for term in ("window", "workspace", "folder", "file", "recent", "lastactive")):
-                hints.append((app_name, "globalStorage", key, str(value)[:400]))
-    workspace_root = os.path.join(root, "User", "workspaceStorage")
-    for workspace_dir in sorted(glob.glob(os.path.join(workspace_root, "*")), key=os.path.getmtime, reverse=True)[:12]:
-        workspace_json = os.path.join(workspace_dir, "workspace.json")
-        folder = ""
-        workspace = ""
-        if os.path.exists(workspace_json):
-            try:
-                data = json.load(open(workspace_json))
-                folder = from_file_uri(data.get("folder", ""))
-                workspace = from_file_uri(data.get("workspace", ""))
-            except Exception:
-                pass
-        if folder or workspace:
-            mtime = dt.datetime.fromtimestamp(os.path.getmtime(workspace_dir)).strftime("%Y-%m-%d %H:%M:%S")
-            rows.append((app_name, short_path(folder), short_path(workspace), mtime, short_path(workspace_dir)))
-        db = os.path.join(workspace_dir, "state.vscdb")
-        if os.path.exists(db):
-            try:
-                con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
-                for key, value in con.execute("select key, value from ItemTable"):
-                    key_l = str(key).lower()
-                    value_s = str(value)
-                    probe = key_l + " " + value_s[:1000].lower()
-                    if any(term in probe for term in ("activeeditor", "active editor", "selected", "selection", "cursor", "position", "diagnostic", "marker", "editor.memento", "history")):
-                        hints.append((app_name, os.path.basename(workspace_dir), str(key), value_s[:400]))
-            except Exception:
-                pass
-
-if rows:
-    print("| App | Folder | Workspace | Modified | State Path |")
-    print("|---|---|---|---|---|")
-    for row in rows:
-        print("| " + " | ".join(esc(item) for item in row) + " |")
-else:
-    print("No Cursor/VS Code workspaceStorage entries found.")
-
-print()
-print("### Persisted Hints")
-if hints:
-    print("| App | Source | Key | Value Snippet |")
-    print("|---|---|---|---|")
-    for app_name, source, key, value in hints[:20]:
-        print(f"| {esc(app_name)} | {esc(source)} | {esc(key)} | {esc(value)} |")
-else:
-    print("No persisted active-file, cursor, selection, or diagnostic hints found.")
-PY
+if [[ -n "$state_root" ]]; then
+  python3 "$script_dir/editor_state_context.py" "$target_path" "$state_root"
+else
+  python3 "$script_dir/editor_state_context.py" "$target_path"
+fi
 
 echo
 echo "## Git Context"

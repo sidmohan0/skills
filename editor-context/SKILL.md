@@ -32,6 +32,12 @@ Use a specific project path for git diff/status:
 bash "$SKILL_DIR/scripts/editor_context.sh" --path /path/to/project
 ```
 
+Use an alternate Cursor/VS Code app-support root for deterministic tests or portable captures:
+
+```bash
+bash "$SKILL_DIR/scripts/editor_context.sh" --state-root /path/to/app-support-root
+```
+
 Include selected text when the focused editor exposes it through Accessibility:
 
 ```bash
@@ -43,4 +49,5 @@ bash "$SKILL_DIR/scripts/editor_context.sh" --include-selection
 - Read-only. Do not edit files, run formatters, save buffers, or apply code actions.
 - Selection capture uses Accessibility only; it does not mutate the clipboard.
 - Diagnostics are limited to persisted marker hints and `git diff --check` unless an editor extension or project-specific diagnostic command is added later.
+- Persisted state parsing is handled by `scripts/editor_state_context.py` and can be tested with `--state-root`.
 - Report cursor position, diagnostics, and selection as unavailable unless a deterministic editor source exists.

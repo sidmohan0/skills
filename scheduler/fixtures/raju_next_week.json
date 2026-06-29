@@ -1,0 +1,88 @@
+{
+  "request": {
+    "title": "Raju sync",
+    "duration_minutes": 30,
+    "timezone": "America/Los_Angeles",
+    "range": {
+      "start": "2026-07-06",
+      "end": "2026-07-11"
+    },
+    "workday": ["09:00", "17:00"],
+    "step_minutes": 30,
+    "max_results": 5,
+    "buffer_before_minutes": 0,
+    "buffer_after_minutes": 0,
+    "conference_requested": true,
+    "target_calendar": {
+      "source": "google",
+      "calendar_label": "primary",
+      "calendar_id": "primary"
+    }
+  },
+  "participants": [
+    {
+      "id": "sid",
+      "label": "Sid",
+      "email": "sid@example.com",
+      "required": true,
+      "availability": [
+        {"start": "2026-07-06T09:00:00-07:00", "end": "2026-07-06T12:00:00-07:00"},
+        {"start": "2026-07-07T09:00:00-07:00", "end": "2026-07-07T12:00:00-07:00"}
+      ],
+      "events": [
+        {
+          "id": "sid-standup",
+          "title": "Standup",
+          "start": "2026-07-06T09:00:00-07:00",
+          "end": "2026-07-06T09:30:00-07:00",
+          "transparency": "opaque"
+        },
+        {
+          "id": "sid-lunch",
+          "title": "Lunch",
+          "start": "2026-07-06T12:00:00-07:00",
+          "end": "2026-07-06T13:00:00-07:00",
+          "transparency": "transparent"
+        }
+      ]
+    },
+    {
+      "id": "raju",
+      "label": "Raju",
+      "email": "raju@example.com",
+      "required": true,
+      "availability": [
+        {"start": "2026-07-06T09:30:00-07:00", "end": "2026-07-06T11:00:00-07:00"},
+        {"start": "2026-07-07T10:00:00-07:00", "end": "2026-07-07T12:00:00-07:00"}
+      ],
+      "events": [
+        {
+          "id": "raju-customer-call",
+          "title": "Customer call",
+          "start": "2026-07-06T10:00:00-07:00",
+          "end": "2026-07-06T10:30:00-07:00",
+          "showAs": "busy"
+        }
+      ]
+    },
+    {
+      "id": "priya",
+      "label": "Priya",
+      "email": "priya@example.com",
+      "required": false,
+      "availability": [
+        {"start": "2026-07-06T09:30:00-07:00", "end": "2026-07-06T11:00:00-07:00"},
+        {"start": "2026-07-07T09:00:00-07:00", "end": "2026-07-07T12:00:00-07:00"}
+      ],
+      "events": [
+        {
+          "id": "priya-interview",
+          "title": "Interview",
+          "start": "2026-07-06T09:30:00-07:00",
+          "end": "2026-07-06T10:00:00-07:00",
+          "showAs": "busy"
+        }
+      ]
+    }
+  ]
+}

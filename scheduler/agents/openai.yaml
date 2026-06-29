@@ -1,0 +1,4 @@
+interface:
+  display_name: "Scheduler"
+  short_description: "Find and book meeting times"
+  default_prompt: "Use $scheduler to find and book a meeting time next week."

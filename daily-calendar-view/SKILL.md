@@ -5,11 +5,56 @@ description: Produce a read-only daily agenda from connected calendar sources. U
 
 # Daily Calendar View
 
+## Core Route
+
+Use connector tools for authentication, calendar discovery, and event fetching. Use the bundled script for deterministic date windows, normalization, dedupe, sorting, conflict/free-window analysis, and final Markdown rendering:
+
+```bash
+SKILL_DIR="${CODEX_SKILL_DIR:-$HOME/.codex/skills/daily-calendar-view}"
+python3 "$SKILL_DIR/scripts/daily_calendar_view.py" window --date 2026-06-29 --timezone America/Los_Angeles
+python3 "$SKILL_DIR/scripts/daily_calendar_view.py" details-needed --input /tmp/daily-calendar-input.json
+python3 "$SKILL_DIR/scripts/daily_calendar_view.py" render --input /tmp/daily-calendar-input.json
+```
+
+The script does not call calendar providers. Build a JSON envelope from connector results, pass that envelope to the script, and use the script's Markdown as the daily agenda unless the user asks for a different format.
+
+Envelope shape:
+
+```json
+{
+  "request": {
+    "date": "2026-06-29",
+    "timezone": "America/Los_Angeles",
+    "workday": ["09:00", "17:00"]
+  },
+  "sources": [
+    {
+      "source_order": 1,
+      "source": "google",
+      "status": "checked",
+      "account_label": "account label returned by connector",
+      "calendar_label": "primary",
+      "calendar_id": "primary"
+    }
+  ],
+  "events": [
+    {
+      "source": "google",
+      "calendar_label": "primary",
+      "event_id": "event id",
+      "raw": {}
+    }
+  ]
+}
+```
+
 ## Deterministic Contract
 
 Build a read-only agenda first. Do not create, update, delete, cancel, or respond to events unless the user explicitly asks for that action later.
 
 Treat connector results as the source of truth. Do not infer that an unavailable source is empty. Report every selected source as `checked`, `unavailable`, or `error`.
+
+Do not hand-compute conflicts, free windows, duplicate decisions, event ordering, or the final agenda table when the script can run. If the script fails, report the failure and the connector status instead of silently switching to ad hoc reasoning.
 
 ## Resolve Date And Window
 
@@ -41,16 +86,18 @@ Do not hard-code personal email addresses, domains, or calendar account names in
 
 ## Fetch Workflow
 
-1. Determine the target date and timezone.
-2. Discover available source/account labels and calendar ids only as needed.
-3. Query every selected source over the same exact day window.
-4. If event records are partial and the answer needs attendees, conferencing, descriptions, response state, organizer details, or recurrence details, fetch specific events by id.
-5. Normalize every event before summarizing.
-6. Merge, deduplicate, sort, and analyze events using the rules below.
+1. Determine the target date and timezone from user input, connector settings, or the runtime fallback rules below.
+2. Run `daily_calendar_view.py window` to produce exact closed-open query bounds.
+3. Discover available source/account labels and calendar ids only as needed.
+4. Query every selected source over the exact window returned by the script.
+5. Build the JSON envelope with every selected source marked `checked`, `unavailable`, or `error`.
+6. Run `daily_calendar_view.py details-needed` when initial event records may be partial. Fetch the returned event ids when attendees, conferencing, descriptions, response state, organizer details, or recurrence details matter.
+7. Run `daily_calendar_view.py render` with the full envelope.
+8. Return the script's Markdown. Add agent-written commentary only when the user asks for interpretation beyond the agenda.
 
 ## Normalized Event Record
 
-Build an internal record with these fields when available:
+The script builds an internal record with these fields when available:
 
 - `source_order`, `source`, `account_label`, `calendar_label`, `event_id`
 - `title`, `start`, `end`, `all_day`, `timezone`
@@ -62,6 +109,8 @@ Build an internal record with these fields when available:
 Treat missing fields as unknown. Do not invent attendees, links, locations, or response state.
 
 ## Merge And Sort Rules
+
+These rules are implemented by `scripts/daily_calendar_view.py` and covered by fixture tests.
 
 Exclude canceled or deleted events from the main agenda. Mention them only if the user asks or if their presence explains a source discrepancy.
 
@@ -77,6 +126,8 @@ For all-day event ties, sort by source order, calendar label, title, then event 
 
 ## Conflict And Free-Window Rules
 
+These rules are implemented by `scripts/daily_calendar_view.py` and covered by fixture tests.
+
 Mark a conflict when two non-declined, non-canceled, busy timed events overlap by at least 1 minute. Do not count transparent/free events as conflicts. Mention tentative events in conflicts as tentative.
 
 Mark a tight transition when two timed events have less than 10 minutes between them and either event has a physical location or a different conferencing/location value.
@@ -85,7 +136,7 @@ Compute free windows only across the default workday `9:00 AM-5:00 PM` in the re
 
 ## Output Shape
 
-Use this structure:
+The script emits this structure:
 
 ```markdown
 **Daily Calendar View — Month D, YYYY**

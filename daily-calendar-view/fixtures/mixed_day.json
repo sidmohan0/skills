@@ -1,0 +1,160 @@
+{
+  "request": {
+    "date": "2026-06-29",
+    "timezone": "America/Los_Angeles",
+    "workday": ["09:00", "17:00"]
+  },
+  "sources": [
+    {
+      "source_order": 1,
+      "source": "google",
+      "status": "checked",
+      "account_label": "personal@example.com",
+      "calendar_label": "primary",
+      "calendar_id": "primary"
+    },
+    {
+      "source_order": 2,
+      "source": "outlook",
+      "status": "checked",
+      "account_label": "work@example.com",
+      "calendar_label": "Calendar",
+      "calendar_id": "calendar-id"
+    }
+  ],
+  "events": [
+    {
+      "source": "google",
+      "calendar_label": "primary",
+      "raw": {
+        "id": "g-all-day",
+        "summary": "Company Holiday",
+        "start": "2026-06-29",
+        "end": "2026-06-30",
+        "visibility": "private",
+        "transparency": "transparent"
+      }
+    },
+    {
+      "source": "google",
+      "calendar_label": "primary",
+      "raw": {
+        "id": "g-team",
+        "summary": "Team Sync",
+        "start": "2026-06-29T09:00:00-07:00",
+        "end": "2026-06-29T09:30:00-07:00",
+        "organizer": "lead@example.com",
+        "hangoutLink": "https://meet.google.com/team-sync",
+        "my_response_status": "accepted",
+        "attendees": [
+          {"email": "lead@example.com", "response_status": "accepted"},
+          {"email": "personal@example.com", "response_status": "accepted", "is_self": true}
+        ]
+      }
+    },
+    {
+      "source": "outlook",
+      "calendar_label": "Calendar",
+      "raw": {
+        "id": "o-team",
+        "subject": "Team Sync",
+        "start": {"dateTime": "2026-06-29T09:00:00", "timeZone": "Pacific Standard Time"},
+        "end": {"dateTime": "2026-06-29T09:30:00", "timeZone": "Pacific Standard Time"},
+        "organizer": {"emailAddress": {"address": "lead@example.com"}},
+        "onlineMeeting": {"joinUrl": "https://teams.microsoft.com/team-sync"},
+        "responseStatus": {"response": "accepted"},
+        "attendees": [
+          {"emailAddress": {"address": "work@example.com"}, "status": {"response": "accepted"}}
+        ]
+      }
+    },
+    {
+      "source": "google",
+      "calendar_label": "primary",
+      "raw": {
+        "id": "g-focus",
+        "summary": "Deep Work",
+        "start": "2026-06-29T09:20:00-07:00",
+        "end": "2026-06-29T10:00:00-07:00",
+        "my_response_status": "accepted"
+      }
+    },
+    {
+      "source": "outlook",
+      "calendar_label": "Calendar",
+      "raw": {
+        "id": "o-client",
+        "subject": "Client Review",
+        "start": {"dateTime": "2026-06-29T10:05:00", "timeZone": "Pacific Standard Time"},
+        "end": {"dateTime": "2026-06-29T10:50:00", "timeZone": "Pacific Standard Time"},
+        "location": {"displayName": "Conference Room"},
+        "responseStatus": {"response": "accepted"},
+        "attendees": [
+          {"emailAddress": {"address": "client@example.com"}, "status": {"response": "accepted"}},
+          {"emailAddress": {"address": "work@example.com"}, "status": {"response": "accepted"}}
+        ],
+        "bodyPreview": "Agenda: review the launch doc https://docs.google.com/document/d/example and decide next action."
+      }
+    },
+    {
+      "source": "google",
+      "calendar_label": "primary",
+      "raw": {
+        "id": "g-lunch",
+        "summary": "Lunch",
+        "start": "2026-06-29T12:00:00-07:00",
+        "end": "2026-06-29T13:00:00-07:00",
+        "transparency": "transparent"
+      }
+    },
+    {
+      "source": "google",
+      "calendar_label": "primary",
+      "raw": {
+        "id": "g-one",
+        "summary": "One-on-one",
+        "start": "2026-06-29T14:00:00-07:00",
+        "end": "2026-06-29T14:30:00-07:00",
+        "organizer": "alice@example.com",
+        "location": "Room A",
+        "my_response_status": "accepted"
+      }
+    },
+    {
+      "source": "outlook",
+      "calendar_label": "Calendar",
+      "raw": {
+        "id": "o-one",
+        "subject": "One-on-one",
+        "start": {"dateTime": "2026-06-29T14:00:00", "timeZone": "Pacific Standard Time"},
+        "end": {"dateTime": "2026-06-29T14:30:00", "timeZone": "Pacific Standard Time"},
+        "organizer": {"emailAddress": {"address": "bob@example.com"}},
+        "location": {"displayName": "Room B"},
+        "responseStatus": {"response": "accepted"}
+      }
+    },
+    {
+      "source": "google",
+      "calendar_label": "primary",
+      "raw": {
+        "id": "g-canceled",
+        "summary": "Canceled Event",
+        "status": "cancelled",
+        "start": "2026-06-29T15:00:00-07:00",
+        "end": "2026-06-29T15:30:00-07:00"
+      }
+    },
+    {
+      "source": "outlook",
+      "calendar_label": "Calendar",
+      "raw": {
+        "id": "o-declined",
+        "subject": "Vendor Pitch",
+        "start": {"dateTime": "2026-06-29T16:00:00", "timeZone": "Pacific Standard Time"},
+        "end": {"dateTime": "2026-06-29T16:45:00", "timeZone": "Pacific Standard Time"},
+        "showAs": "busy",
+        "responseStatus": {"response": "declined"}
+      }
+    }
+  ]
+}

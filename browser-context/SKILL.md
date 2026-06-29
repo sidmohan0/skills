@@ -11,7 +11,7 @@ Use structured browser sources before screenshots:
 
 1. Use browser AppleScript for currently open tabs.
 2. Use Chrome `Sessions/Session_*` files for profile session tabs, pinned tabs, tab groups, selected navigation titles, and URLs when readable.
-3. Use Chrome profile files for downloads and reading list.
+3. Use Chrome profile files for downloads and reading list through `scripts/chrome_profile_context.py`.
 
 Run the bundled script:
 

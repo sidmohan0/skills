@@ -64,39 +64,7 @@ chrome_base="${HOME}/Library/Application Support/Google/Chrome"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 profile_info="$(
-python3 - "$chrome_base" "$profile_name" "$profile_dir_override" <<'PY'
-import json, os, sys
-base, wanted, override = sys.argv[1], sys.argv[2], sys.argv[3]
-def emit(path="", dirname="", name="", match="unavailable"):
-    print(path)
-    print(dirname)
-    print(name)
-    print(match)
-if override:
-    path = os.path.abspath(os.path.expanduser(override))
-    emit(path, os.path.basename(path), "", "override")
-    raise SystemExit
-local_state = os.path.join(base, "Local State")
-try:
-    data = json.load(open(local_state))
-    profiles = data.get("profile", {}).get("info_cache", {})
-    for dirname, info in profiles.items():
-        display_name = info.get("name", "")
-        if display_name == wanted or dirname == wanted:
-            emit(os.path.join(base, dirname), dirname, display_name, "exact")
-            raise SystemExit
-    if len(profiles) == 1:
-        dirname, info = next(iter(profiles.items()))
-        emit(os.path.join(base, dirname), dirname, info.get("name", ""), "fallback-single-profile")
-        raise SystemExit
-    if "Default" in profiles:
-        info = profiles["Default"]
-        emit(os.path.join(base, "Default"), "Default", info.get("name", ""), "fallback-default")
-        raise SystemExit
-except Exception:
-    pass
-emit()
-PY
+python3 "$script_dir/chrome_profile_context.py" profile "$chrome_base" "$profile_name" "$profile_dir_override"
 )"
 profile_dir="$(printf '%s\n' "$profile_info" | sed -n '1p')"
 profile_dir_name="$(printf '%s\n' "$profile_info" | sed -n '2p')"
@@ -168,33 +136,8 @@ if [[ -z "$profile_dir" || ! -r "$profile_dir/History" ]]; then
 else
   tmpdb="$(mktemp "${TMPDIR:-/tmp}/chrome-history.XXXXXX")"
   cp "$profile_dir/History" "$tmpdb" 2>/dev/null || true
-  python3 - "$tmpdb" "$limit" <<'PY'
-import datetime as dt, os, sqlite3, sys
-db, limit = sys.argv[1], int(sys.argv[2])
-print("| Started | Path | URL |")
-print("|---|---|---|")
-try:
-    con = sqlite3.connect(db)
-    rows = con.execute(
-        "select start_time, coalesce(current_path, target_path, ''), tab_url "
-        "from downloads order by start_time desc limit ?", (limit,)
-    ).fetchall()
-    for start, path, url in rows:
-        if start:
-            when = dt.datetime(1601, 1, 1) + dt.timedelta(microseconds=start)
-            when_s = when.strftime("%Y-%m-%d %H:%M:%S")
-        else:
-            when_s = ""
-        esc = lambda s: str(s or "").replace("|", "\\|").replace("\n", " ")
-        print(f"| {esc(when_s)} | `{esc(path)}` | {esc(url)} |")
-except Exception as exc:
-    print(f"Downloads unavailable: {exc}")
-finally:
-    try:
-        os.remove(db)
-    except OSError:
-        pass
-PY
+  python3 "$script_dir/chrome_profile_context.py" downloads "$tmpdb" "$limit"
+  rm -f "$tmpdb"
 fi
 
 echo
@@ -202,38 +145,5 @@ echo "## Reading List"
 if [[ -z "$profile_dir" || ! -r "$profile_dir/Bookmarks" ]]; then
   echo "Reading list unavailable: Chrome profile Bookmarks file is not readable."
 else
-  python3 - "$profile_dir/Bookmarks" "$limit" <<'PY'
-import json, sys
-path, limit = sys.argv[1], int(sys.argv[2])
-def walk(node):
-    if isinstance(node, dict):
-        if node.get("type") == "url":
-            yield node
-        for child in node.get("children", []):
-            yield from walk(child)
-    elif isinstance(node, list):
-        for child in node:
-            yield from walk(child)
-try:
-    data = json.load(open(path))
-    roots = data.get("roots", {})
-    candidates = []
-    for key in ("reading_list", "synced"):
-        if key in roots:
-            candidates.extend(walk(roots[key]))
-    print("| Title | URL |")
-    print("|---|---|")
-    count = 0
-    for item in candidates:
-        title = (item.get("name") or "").replace("|", "\\|").replace("\n", " ")
-        url = (item.get("url") or "").replace("|", "\\|").replace("\n", " ")
-        print(f"| {title} | {url} |")
-        count += 1
-        if count >= limit:
-            break
-    if count == 0:
-        print("No reading-list entries found in readable bookmark roots.")
-except Exception as exc:
-    print(f"Reading list unavailable: {exc}")
-PY
+  python3 "$script_dir/chrome_profile_context.py" reading-list "$profile_dir/Bookmarks" "$limit"
 fi

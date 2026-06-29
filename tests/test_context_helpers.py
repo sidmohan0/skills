@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import datetime as dt
 import importlib.util
 import json
 import os
@@ -24,6 +25,10 @@ def load_module(name, path):
 chrome_session = load_module(
     "chrome_session_context",
     REPO_ROOT / "browser-context" / "scripts" / "chrome_session_context.py",
+)
+chrome_profile = load_module(
+    "chrome_profile_context",
+    REPO_ROOT / "browser-context" / "scripts" / "chrome_profile_context.py",
 )
 terminal_process = load_module(
     "terminal_process_context",
@@ -127,6 +132,91 @@ class ChromeSessionContextTests(unittest.TestCase):
             self.assertEqual(metadata[group_key]["color"], "4")
             self.assertEqual(metadata[group_key]["collapsed"], "true")
             self.assertEqual(metadata[group_key]["saved_guid"], "saved-guid-1")
+
+
+class ChromeProfileContextTests(unittest.TestCase):
+    def test_profile_resolver_downloads_and_reading_list(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            default = base / "Default"
+            work = base / "Profile 1"
+            default.mkdir()
+            work.mkdir()
+            (base / "Local State").write_text(
+                json.dumps(
+                    {
+                        "profile": {
+                            "info_cache": {
+                                "Default": {"name": "Personal"},
+                                "Profile 1": {"name": "Work"},
+                            }
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            self.assertEqual(chrome_profile.resolve_profile(str(base), "Work")["path"], str(work))
+            self.assertEqual(chrome_profile.resolve_profile(str(base), "Profile 1")["match"], "exact")
+            self.assertEqual(chrome_profile.resolve_profile(str(base), "Missing")["dirname"], "Default")
+            self.assertEqual(
+                chrome_profile.resolve_profile(str(base), "Work", str(default))["match"],
+                "override",
+            )
+
+            history = base / "History"
+            con = sqlite3.connect(history)
+            con.execute("create table downloads (start_time integer, current_path text, target_path text, tab_url text)")
+            chrome_time = int((dt.datetime(2026, 6, 29, 12, 0, 0) - dt.datetime(1601, 1, 1)).total_seconds() * 1_000_000)
+            con.executemany(
+                "insert into downloads values (?, ?, ?, ?)",
+                [
+                    (chrome_time, "/tmp/report|draft.pdf", "", "https://example.test/download|one"),
+                    (chrome_time - 1, "", "/tmp/fallback.txt", "https://example.test/two"),
+                ],
+            )
+            con.commit()
+            con.close()
+            downloads = list(chrome_profile.iter_downloads(str(history), 2))
+            self.assertEqual(downloads[0]["started"], "2026-06-29 12:00:00")
+            self.assertEqual(downloads[0]["path"], "/tmp/report|draft.pdf")
+            self.assertEqual(downloads[1]["path"], "/tmp/fallback.txt")
+
+            bookmarks = base / "Bookmarks"
+            bookmarks.write_text(
+                json.dumps(
+                    {
+                        "roots": {
+                            "reading_list": {
+                                "children": [
+                                    {
+                                        "type": "url",
+                                        "name": "Read|Me",
+                                        "url": "https://example.test/read",
+                                    }
+                                ]
+                            },
+                            "synced": {
+                                "children": [
+                                    {
+                                        "type": "folder",
+                                        "children": [
+                                            {
+                                                "type": "url",
+                                                "name": "Synced Item",
+                                                "url": "https://example.test/synced",
+                                            }
+                                        ],
+                                    }
+                                ]
+                            },
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            reading = list(chrome_profile.iter_reading_list(str(bookmarks), 5))
+            self.assertEqual([item["title"] for item in reading], ["Read|Me", "Synced Item"])
+            self.assertEqual(chrome_profile.md_cell("Read|Me"), "Read\\|Me")
 
 
 class FinderItemContextTests(unittest.TestCase):

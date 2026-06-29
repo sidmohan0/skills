@@ -5,6 +5,7 @@ My current Mac-focused Agent skills, more to come!
 - `daily-inbox-view`: reads Apple Mail accounts through the local Mail app and produces a daily inbox triage preview.
 - `daily-calendar-view`: builds a deterministic read-only daily agenda from connected calendar sources.
 - `scheduler`: finds, validates, and prepares guarded calendar meeting writes after explicit confirmation.
+- `wework`: uses the installed third-party `wework` CLI from `github.com/dvcrn/wework-cli` to inspect and manage WeWork bookings. This is not documented here as an official WeWork CLI.
 
 I use this as a Codex automation periodically throughout the day to pull my calendar and inbox. I am going to keep building it out from here.
 
@@ -53,6 +54,24 @@ python3 "$SKILL_DIR/scripts/scheduler.py" rank-slots --input /tmp/scheduler-inpu
 python3 "$SKILL_DIR/scripts/scheduler.py" action-plan --input /tmp/scheduler-input.json --action create --slot-id slot-001
 ```
 
+### `wework`
+
+Uses an already-installed `wework` command to list WeWork locations, inspect desk availability, manage bookings, quote bookings, and export an `.ics` calendar.
+
+Implementation notes:
+
+- Source/provenance: copied from the `wework` skill bundled in `github.com/dvcrn/wework-cli`.
+- CLI dependency: this skill calls the third-party `wework` binary from `github.com/dvcrn/wework-cli`; it does not implement the WeWork API itself.
+- Official status: I have not found evidence that `dvcrn/wework-cli` is an official WeWork-maintained CLI, so treat it as unofficial third-party tooling.
+- Credentials: the skill does not store credentials. The CLI expects `WEWORK_USERNAME` and `WEWORK_PASSWORD` in the environment, or explicit `--username` and `--password` flags. Prefer environment variables and do not commit credentials.
+
+Basic checks:
+
+```bash
+command -v wework
+wework --help
+```
+
 ## Install
 
 ```bash
@@ -63,6 +82,7 @@ mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
 ln -s "$PWD/daily-inbox-view" "${CODEX_HOME:-$HOME/.codex}/skills/daily-inbox-view"
 ln -s "$PWD/daily-calendar-view" "${CODEX_HOME:-$HOME/.codex}/skills/daily-calendar-view"
 ln -s "$PWD/scheduler" "${CODEX_HOME:-$HOME/.codex}/skills/scheduler"
+ln -s "$PWD/wework" "${CODEX_HOME:-$HOME/.codex}/skills/wework"
 ```
 
 Restart Codex after installing so it can pick up the new skills.
@@ -75,6 +95,7 @@ To install only one skill, link just that directory into `${CODEX_HOME:-$HOME/.c
 - Google Calendar and/or Outlook Calendar connectors authenticated in Codex for `daily-calendar-view` and `scheduler`.
 - Python 3 for deterministic calendar and scheduler scripts.
 - Apple Mail Automation permission if macOS prompts the first time the inbox script runs.
+- Installed `wework` CLI plus `WEWORK_USERNAME` and `WEWORK_PASSWORD` environment variables for `wework`.
 
 ## Use
 
@@ -83,6 +104,7 @@ Ask Codex for the skill by name:
 - `Use $daily-inbox-view to check my Apple Mail accounts and preview today's inbox.`
 - `Use $daily-calendar-view to show my calendar for today with important context.`
 - `Use $scheduler to find and book a meeting time with Raju next week.`
+- `Use $wework to show my upcoming WeWork bookings.`
 
 You can also smoke-test the inbox script directly:
 
